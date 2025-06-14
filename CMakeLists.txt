@@ -21,6 +21,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${G4CMP_INCLUDE_DIRS})
 include(${G4CMP_USE_FILE})
 include(${Geant4_USE_FILE})
+add_definitions(-DG4MULTITHREADED)
 
 #----------------------------------------------------------------------------
 # RPATH stuff
@@ -47,6 +48,7 @@ set(phonon_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PhononPrimaryGeneratorAction.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PhononSensitivity.cc
     ${CMAKE_CURRENT_SOURCE_DIR}/src/PhononSteppingAction.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/PhononPhysicsList.cc
     )
     
 if(USE_GEANT4_STATIC_LIBS)

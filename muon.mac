@@ -1,0 +1,7 @@
+/gun/particle mu-
+/gun/energy 4 GeV
+/gun/position 0 0 200 nm
+/gun/direction 0 0 -1
+
+/tracking/verbose 1
+/run/beamOn 1
