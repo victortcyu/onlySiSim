@@ -31,7 +31,7 @@
 
 PhononDetectorConstruction::PhononDetectorConstruction()
     : fGalactic(0), fSi(0), 
-    fWorldPhys(0), fSiSlab(0), fabsorbLayer(0), siVacuumSides(0), siVacuumBottom(0),
+    fWorldPhys(0), fSiSlab(0), fGlue(0), siVacuum(0), siGlue(0), siSi(0),
     fConstructed(false) {
     ;
 }
@@ -39,8 +39,9 @@ PhononDetectorConstruction::PhononDetectorConstruction()
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo....
 
 PhononDetectorConstruction::~PhononDetectorConstruction() {
-    delete siVacuumSides;
-    delete siVacuumBottom;
+    delete siVacuum;
+    delete siGlue;
+    delete siSi;
 }
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo....
@@ -50,7 +51,6 @@ G4VPhysicalVolume* PhononDetectorConstruction::Construct()
 {
     if (fConstructed) {
         if (!G4RunManager::IfGeometryHasBeenDestroyed()) {
-            // Run manager hasn't cleaned volume stores. This code shouldn't execute
             G4GeometryManager::GetInstance()->OpenGeometry();
             G4PhysicalVolumeStore::GetInstance()->Clean();
             G4LogicalVolumeStore::GetInstance()->Clean();
@@ -102,14 +102,14 @@ void PhononDetectorConstruction::SetupGeometry()
 
     const G4double slab_half_thk = (slab_thk_from_hetero + slab_thk_from_subs) / 2.0;
 
-    const G4double absorb_thickness = 10 * nm;
-    const G4double absorb_half_thk = absorb_thickness / 2.0;
+    const G4double glue_thk = 10 * nm;
+    const G4double glue_half_thk = glue_thk / 2.0;
 
-    //const G4double trackHX = 25 * nm, trackHY = 25 * nm, trackHZ = 1.5 * nm;
-    const G4double trackHX = slab_half_X, trackHY = slab_half_Y, trackHZ = 1.5 * nm;
+    const G4double track_half_X = 25 * nm, track_half_Y = 25 * nm, track_half_Z = 1.5 * nm;
+    // const G4double track_half_X = slab_half_X, track_half_Y = slab_half_Y, track_half_Z = 1.5 * nm;
 
     // total_half_thk = 170 nm
-    const G4double total_half_thk = slab_half_thk + absorb_half_thk;
+    const G4double total_half_thk = slab_half_thk + glue_half_thk;
     auto solidWorld = new G4Box("World",                           // its name
         1.2 * slab_half_X, 1.2 * slab_half_Y, 1.2 * total_half_thk);  // its size
 
@@ -133,21 +133,21 @@ void PhononDetectorConstruction::SetupGeometry()
     // blue
     SetColour(logicSlab, 0.2, 0.2, 0.8);
 
-    G4Box* solidTrack = new G4Box("TrackingRegion", trackHX, trackHY, trackHZ);
+    G4Box* solidTrack = new G4Box("TrackingRegion", track_half_X, track_half_Y, track_half_Z);
     G4LogicalVolume* logicTrack = new G4LogicalVolume(solidTrack, fSi, "TrackingRegion");
     fSolidTrack = new G4PVPlacement(nullptr, 
         G4ThreeVector(0, 0, 0), // centered within logicQW
         logicTrack, "TrackingRegion", logicSlab, false, 1, checkOverlaps);
     SetColour(logicTrack, 0.9, 0.1, 0.1);
 
-    G4Box* absorbLayer = new G4Box("bottomBox", slab_half_X,
-        slab_half_Y, absorb_half_thk);
-    G4LogicalVolume* absorbLogic = new G4LogicalVolume(absorbLayer, fGalactic, "bottomBox");
-    fabsorbLayer = new G4PVPlacement(nullptr,
-        G4ThreeVector(0, 0, -absorb_half_thk - slab_half_thk),
-        absorbLogic, "bottomBox", logicWorld, false, 0);
+    G4Box* glue = new G4Box("Glue", slab_half_X,
+        slab_half_Y, glue_half_thk);
+    G4LogicalVolume* glueLogic = new G4LogicalVolume(glue, fGalactic, "Glue");
+    fGlue = new G4PVPlacement(nullptr,
+        G4ThreeVector(0, 0, -glue_half_thk - slab_half_thk),
+        glueLogic, "Glue", logicWorld, false, 0);
     // green
-    SetColour(absorbLogic, 0.2, 0.8, 0.2);
+    SetColour(glueLogic, 0.2, 0.8, 0.2);
 
     ////
     ////Silicon lattice information
@@ -170,33 +170,37 @@ void PhononDetectorConstruction::SetupGeometry()
     if (!fConstructed) {
         const G4double GHz = 1e9 * hertz;
         
-        // from file:///C:/Users/victo/Downloads/BF00693457.pdf, for low temp
-        // only for silicon, need to find sige and al separately.
-        // (5/22) APPROX'd the anharmonic reflection with the bulk value
-        // (5/29) decided to change to no anharmonic scattering at vacuum boundary
-        const std::vector<G4double> SiVacAnhCoeffs = { 0, 0, 0, 0, 0, 0/*1.2e-10*/ };
-        const std::vector<G4double> SiGeVacAnhCoeffs = { 0, 0, 0, 0, 0, 0/* NO VALUE */ };
+        // The below block is obsolete as of 7/21
+   
+        //// from file:///C:/Users/victo/Downloads/BF00693457.pdf, for low temp
+        //// only for silicon, need to find sige and al separately.
+        //// (5/22) APPROX'd the anharmonic reflection with the bulk value
+        //// (5/29) decided to change to no anharmonic scattering at vacuum boundary
+        //const std::vector<G4double> SiVacAnhCoeffs = { 0, 0, 0, 0, 0, 0/*1.2e-10*/ };
+        //const std::vector<G4double> SiGeVacAnhCoeffs = { 0, 0, 0, 0, 0, 0/* NO VALUE */ };
+        //// ASSUME rms roughness is 2 nm and silicon speed of sound 6350 
+        //// using effective sound velocity https://en.wikipedia.org/wiki/Debye_model 
+        //// the Ziman becomes e^(-1.56650674*10^(-5) * f^2)
+        //// Silicon-vacuum boundary
+        //const std::vector<G4double> SiVacSpecCoeffs =
+        //{ 1, 0.0002302027389270810, -2.1735704309859052e-5, 
+        //    5.2926139131064460e-8, 3.6540831265189605e-11 };
+        //const std::vector<G4double> SiVacDiffCoeffs =
+        //{ 0, -0.0002302027389270810, 2.1735704309859052e-5,
+        //    -5.2926139131064460e-8, -3.6540831265189605e-11/*, -1.2e-10*/ };
+        //// the reflCutoff is chosen because then the Ziman fit is e^(-6), vanishing
+        //// the anhCutoff is the Debye frequency
+        //const G4double SiVacAnhCutoff = 15000., SiVacReflCutoff = 618.;   // GHz units
 
-        // ASSUME rms roughness is 2 nm and silicon speed of sound 6350 
-        // using effective sound velocity https://en.wikipedia.org/wiki/Debye_model 
-        // the Ziman becomes e^(-1.56650674*10^(-5) * f^2)
+        const std::vector<G4double> FullSpecCoeff = { 1.0 };
+        const std::vector<G4double> NoSpecCoeff = { 0 };
+        const std::vector<G4double> FullDiffCoeff = { 1.0 };
+        const std::vector<G4double> LargeDiffCoeff = { 0.10 };
+        const std::vector<G4double> NoDiffCoeff = { 0.0 };
+        const std::vector<G4double> NoAnhCoeff = { 0.0 };
+        const G4double AnhCutoff = 100000, DiffuseCutoff = 100000;   // always use the given values
 
-        // Silicon-vacuum boundary
-        const std::vector<G4double> SiVacSpecCoeffs =
-        { 1, 0.0002302027389270810, -2.1735704309859052e-5, 
-            5.2926139131064460e-8, 3.6540831265189605e-11 };
-        const std::vector<G4double> SiVacDiffCoeffs =
-        { 0, -0.0002302027389270810, 2.1735704309859052e-5,
-            -5.2926139131064460e-8, -3.6540831265189605e-11/*, -1.2e-10*/ };
-        // the reflCutoff is chosen because then the Ziman fit is e^(-6), vanishing
-        // the anhCutoff is the Debye frequency
-        const G4double SiVacAnhCutoff = 15000., SiVacReflCutoff = 618.;   // GHz units
-
-        // 
-        // Silicon boundaries
-        // 
-        // no absorption
-        siVacuumSides = new G4CMPSurfaceProperty("siVacuumSides", 
+        siVacuum = new G4CMPSurfaceProperty("siVacuum", 
             1.0, 0.0, 0.0, 0.0,   // q absorption, q refl, e min k (to absorb), hole min k
             0.0, 1.0, 0.0 /*set to be vanishing because it's ONLY USED
                            at high frequency where we have no specular refl
@@ -205,37 +209,35 @@ void PhononDetectorConstruction::SetupGeometry()
                           VARY PARAMETER FOR TESTING/SENSITIVITY!
                           */
             0.0);  // phonon abs, phonon refl (implying transmission), ph specular, p min k
-        siVacuumSides->AddScatteringProperties(SiVacAnhCutoff, SiVacReflCutoff, SiVacAnhCoeffs,
-            SiVacDiffCoeffs, SiVacSpecCoeffs, GHz, GHz, GHz);
-        // AttachPhononSensor(siVacuumSides);
+        siVacuum->AddScatteringProperties(AnhCutoff, DiffuseCutoff, NoAnhCoeff,
+            NoDiffCoeff, FullSpecCoeff, GHz, GHz, GHz);
 
         // high absorption
-        siVacuumBottom = new G4CMPSurfaceProperty("siVacuumBottom", 
+        siGlue = new G4CMPSurfaceProperty("siGlue", 
             1.0, 0.0, 0.0, 0.0,
-            0.9 /*can vary this parameter to vary the back-reflection*/, 0.0, 0.0, 0.0);
-        siVacuumBottom->AddScatteringProperties(SiVacAnhCutoff, SiVacReflCutoff, SiVacAnhCoeffs,
-            SiVacDiffCoeffs, SiVacSpecCoeffs, GHz, GHz, GHz);
-        // AttachPhononSensor(siVacuumBottom);
+            0.3 /*vary this parameter*/, 0.0, 0.0, 0.0);
+        siGlue->AddScatteringProperties(AnhCutoff, DiffuseCutoff, NoAnhCoeff,
+            NoDiffCoeff, FullSpecCoeff, GHz, GHz, GHz);
 
         // tracking-slab interface
-        trivialProp = new G4CMPSurfaceProperty("trivial",
+        siSi = new G4CMPSurfaceProperty("trivial",
             0.0, 0.0, 0.0, 0.0,   // qAbs, qRefl, eMinK, hMinK
             0.0, 0.0, 0.0, 0.0); // pAbs, pRefl, pSpec, pMinK
-        std::vector<G4double> zeroA(1, 0.0), zeroD(1, 0.0), zeroS(1, 0.0);
-        trivialProp->AddScatteringProperties(1e6, 1e6, zeroA, zeroD, zeroS, GHz, GHz, GHz);
+        siSi->AddScatteringProperties(AnhCutoff, DiffuseCutoff, NoAnhCoeff,
+            NoDiffCoeff, NoSpecCoeff, GHz, GHz, GHz);
     }
 
     //
     // Surface attachment
     //
     new G4CMPLogicalBorderSurface("siWall", fSiSlab, fWorldPhys,
-        siVacuumSides);
-    new G4CMPLogicalBorderSurface("siBottom", fSiSlab, fabsorbLayer,
-        siVacuumBottom);
+        siVacuum);
+    new G4CMPLogicalBorderSurface("siBottom", fSiSlab, fGlue,
+        siGlue);
     new G4CMPLogicalBorderSurface("tracking", fSiSlab, fSolidTrack,
-        trivialProp);
+        siSi);
     new G4CMPLogicalBorderSurface("tracking", fSolidTrack, fSiSlab,
-        trivialProp);
+        siSi);
 
 
 

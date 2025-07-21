@@ -1,7 +1,13 @@
+# /run/numberOfThreads 8
+/run/initialize
+# /g4cmp/producePhonons 0.02
+/g4cmp/phononBounces 1000
+
 /gun/particle mu-
 /gun/energy 4 GeV
+# add direction dependence and position dependence?
 /gun/position 0 0 200 nm
 /gun/direction 0 0 -1
 
-/tracking/verbose 1
+# /tracking/verbose 1
 /run/beamOn 1

@@ -7,13 +7,11 @@
 #include "G4PhononTransFast.hh"
 #include "G4PhononLong.hh"
 
-// Constructor: open file and write header line
 PhononSteppingAction::PhononSteppingAction() {
     fout_.open("phonon_tracking.csv");
-    fout_ << "trackID, stepNumber, x/nm, y/nm, z/nm, time_ns, energy_meV\n";
+    fout_ << "trackID, stepNumber, x/nm, y/nm, z/nm, time_ns, energy_meV, weight\n";
 }
 
-// Destructor: close file
 PhononSteppingAction::~PhononSteppingAction() {
     if (fout_.is_open()) fout_.close();
 }
@@ -32,17 +30,18 @@ void PhononSteppingAction::UserSteppingAction(const G4Step* step) {
     auto prevPhysVol = prePoint->GetPhysicalVolume();
     if (!prevPhysVol // undefined pointer
         || postPoint->GetPhysicalVolume()->GetName() != "TrackingRegion" // not in the correct region
-        || prePoint->GetStepStatus() != fGeomBoundary // prevent double-counting by checking it came from outside 
+        || postPoint->GetStepStatus() != fGeomBoundary // prevent double-counting by checking it came from outside
+                                                       // recall that the status is attached to the postPoint
         )
         return;
-    auto pos = postPoint->GetPosition();       // G4StepPoint::GetPosition() :contentReference[oaicite:3]{index=3}
-    auto time = postPoint->GetGlobalTime();     // G4StepPoint::GetGlobalTime() :contentReference[oaicite:4]{index=4}
-    auto energy = postPoint->GetKineticEnergy();  // G4StepPoint::GetKineticEnergy() :contentReference[oaicite:5]{index=5}
+    auto pos = postPoint->GetPosition();       
+    auto time = postPoint->GetGlobalTime();     
+    auto energy = postPoint->GetKineticEnergy(); 
 
     // 3) Write out: trackID, x/nm, y/nm, z/nm, time/ns, energy/eV
     // note that for such geometric crossings, our post-step point will always be on the boundary
     // thus the z value will not be interesting. However, the step will now be in the new volume
     fout_ << track->GetTrackID() << "," << track->GetCurrentStepNumber() << ","
         << pos.x() / nm << "," << pos.y() / nm << "," << pos.z() / nm << ","
-        << time / ns << "," << energy / eV * 1e3 << "\n";
+        << time / ns << "," << energy / eV * 1e3 << "," << postPoint->GetWeight() << "\n";
 }

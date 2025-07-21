@@ -40,16 +40,17 @@ private:
 	G4Material* fSi;
 
 	G4VPhysicalVolume* fWorldPhys;
+	/*G4VPhysicalVolume* fSiCap;
+	G4VPhysicalVolume* fSiGeSpacer;*/
 	G4VPhysicalVolume* fSiSlab;
 	G4VPhysicalVolume* fSolidTrack;
-	G4VPhysicalVolume* fabsorbLayer;
+	G4VPhysicalVolume* fGlue;
 
-	G4CMPSurfaceProperty* siVacuumSides;
-	G4CMPSurfaceProperty* siVacuumBottom;
-	G4CMPSurfaceProperty* trivialProp;
-	 G4CMPElectrodeSensitivity* electrodeSensitivity;
+	G4CMPSurfaceProperty* siVacuum;
+	G4CMPSurfaceProperty* siGlue;
+	G4CMPSurfaceProperty* siSi;
 
-	 G4bool fConstructed;
+	G4bool fConstructed;
 };
 
 #endif
